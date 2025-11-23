@@ -1,0 +1,47 @@
+# golangci-lint configuration
+
+run:
+  timeout: 5m
+  tests: true
+  go: "1.23"
+
+linters:
+  enable:
+    # Errors
+    - errcheck          # Check for unchecked errors
+    - errorlint         # Find code that will cause problems with the error wrapping scheme
+    - nilnil            # Check for mixing named and unnamed result parameters
+
+    # Performance
+    - ineffassign       # Detect when assignments to existing variables are not used
+    - unused            # Check for unused constants, variables, functions and types
+    - deadcode          # Finds unused code
+
+    # Fmt
+    - gofmt             # Check whether code was gofmt-ed
+    - goimports         # In addition to fixing imports, goimports will also remove unused imports
+
+    # Style
+    - govet             # Go vet is a tool which examines Go source code and reports suspicious constructs
+    - misspell          # Finds commonly misspelled English words
+    - unconvert         # Remove unnecessary type conversions
+    
+    # Complexity
+    - gocyclo           # Check function complexity
+
+linters-settings:
+  gocyclo:
+    min-complexity: 10
+
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - (*log.Logger).Print
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocyclo

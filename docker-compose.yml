@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pr_reviewers
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d pr_reviewers"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pr_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api
+    environment:
+      DATABASE_URL: "postgres://user:password@postgres:5432/pr_reviewers?sslmode=disable"
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/app/migrations:ro
+    networks:
+      - pr_network
+    restart: unless-stopped
+    command: sh -c "sleep 5 && ./api"
+
+volumes:
+  postgres_data:
+
+networks:
+  pr_network:
+    driver: bridge
