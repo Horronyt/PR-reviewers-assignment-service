@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
 )
 
 // TeamService сервис для работы с командами
@@ -41,7 +41,7 @@ func (s *TeamService) CreateTeam(ctx context.Context, team *domain.Team) (*domai
 	// Создаем/обновляем пользователей
 	for i := range team.Members {
 		team.Members[i].TeamName = team.TeamName
-		if err := s.userRepo.CreateOrUpdate(ctx, &team.Members[i]); err != nil {
+		if err := s.userRepo.CreateOrUpdateUser(ctx, &team.Members[i]); err != nil {
 			return nil, fmt.Errorf("failed to create team member: %w", err)
 		}
 	}

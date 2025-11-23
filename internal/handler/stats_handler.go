@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/horronyt/pr-reviewers-service/internal/service"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/service"
 )
 
 // StatsHandler обработчик для получения статистики

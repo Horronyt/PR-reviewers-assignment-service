@@ -11,9 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo/postgres"
-	"github.com/horronyt/pr-reviewers-service/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

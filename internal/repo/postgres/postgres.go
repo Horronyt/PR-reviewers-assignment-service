@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -22,7 +22,7 @@ func New(db *pgxpool.Pool) *Repository {
 
 // ===== USER REPOSITORY =====
 
-func (r *Repository) CreateOrUpdate(ctx context.Context, user *domain.User) error {
+func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) error {
 	query := `
 		INSERT INTO users (user_id, username, team_name, is_active, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -34,7 +34,7 @@ func (r *Repository) CreateOrUpdate(ctx context.Context, user *domain.User) erro
 	return err
 }
 
-func (r *Repository) GetByID(ctx context.Context, userID string) (*domain.User, error) {
+func (r *Repository) GetUserByID(ctx context.Context, userID string) (*domain.User, error) {
 	query := `
 		SELECT user_id, username, team_name, is_active, created_at, updated_at
 		FROM users
@@ -50,7 +50,7 @@ func (r *Repository) GetByID(ctx context.Context, userID string) (*domain.User, 
 	return user, nil
 }
 
-func (r *Repository) GetByTeam(ctx context.Context, teamName string) ([]domain.User, error) {
+func (r *Repository) GetUsersByTeam(ctx context.Context, teamName string) ([]domain.User, error) {
 	query := `
 		SELECT user_id, username, team_name, is_active, created_at, updated_at
 		FROM users
@@ -74,7 +74,7 @@ func (r *Repository) GetByTeam(ctx context.Context, teamName string) ([]domain.U
 	return users, rows.Err()
 }
 
-func (r *Repository) GetActive(ctx context.Context, teamName string) ([]domain.User, error) {
+func (r *Repository) GetActiveUsers(ctx context.Context, teamName string) ([]domain.User, error) {
 	query := `
 		SELECT user_id, username, team_name, is_active, created_at, updated_at
 		FROM users
@@ -98,7 +98,7 @@ func (r *Repository) GetActive(ctx context.Context, teamName string) ([]domain.U
 	return users, rows.Err()
 }
 
-func (r *Repository) SetActive(ctx context.Context, userID string, isActive bool) (*domain.User, error) {
+func (r *Repository) SetUserActive(ctx context.Context, userID string, isActive bool) (*domain.User, error) {
 	query := `
 		UPDATE users
 		SET is_active = $1, updated_at = $2
@@ -116,7 +116,7 @@ func (r *Repository) SetActive(ctx context.Context, userID string, isActive bool
 	return user, nil
 }
 
-func (r *Repository) GetAllByIDs(ctx context.Context, userIDs []string) ([]domain.User, error) {
+func (r *Repository) GetAllUsersByIDs(ctx context.Context, userIDs []string) ([]domain.User, error) {
 	if len(userIDs) == 0 {
 		return []domain.User{}, nil
 	}
@@ -180,7 +180,7 @@ func (r *Repository) GetTeamByName(ctx context.Context, teamName string) (*domai
 	}
 
 	// Загружаем членов команды
-	members, err := r.GetByTeam(ctx, teamName)
+	members, err := r.GetUsersByTeam(ctx, teamName)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +196,7 @@ func (r *Repository) TeamExists(ctx context.Context, teamName string) (bool, err
 }
 
 func (r *Repository) GetTeamMembers(ctx context.Context, teamName string) ([]domain.User, error) {
-	return r.GetByTeam(ctx, teamName)
+	return r.GetUsersByTeam(ctx, teamName)
 }
 
 // ===== PR REPOSITORY =====
@@ -286,7 +286,7 @@ func (r *Repository) UpdatePRStatus(ctx context.Context, prID string, status str
 	return err
 }
 
-func (r *Repository) GetPRByReviewer(ctx context.Context, userID string) ([]domain.PullRequest, error) {
+func (r *Repository) GetPRsByReviewer(ctx context.Context, userID string) ([]domain.PullRequest, error) {
 	query := `
 		SELECT DISTINCT pr.pull_request_id, pr.pull_request_name, pr.author_id, pr.status, pr.created_at, pr.merged_at
 		FROM pull_requests pr

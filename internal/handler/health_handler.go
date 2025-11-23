@@ -3,8 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/horronyt/pr-reviewers-service/internal/service"
 )
 
 // HealthHandler для health check

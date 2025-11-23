@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
 )
 
 // UserService сервис для работы с пользователями
@@ -23,7 +23,7 @@ func NewUserService(userRepo repo.UserRepository, statsRepo repo.StatsRepository
 
 // SetActive устанавливает флаг активности пользователя
 func (s *UserService) SetActive(ctx context.Context, userID string, isActive bool) (*domain.User, error) {
-	user, err := s.userRepo.SetActive(ctx, userID, isActive)
+	user, err := s.userRepo.SetUserActive(ctx, userID, isActive)
 	if err != nil {
 		return nil, domain.NewError(domain.ErrorCodeNotFound, "user not found")
 	}
@@ -32,7 +32,7 @@ func (s *UserService) SetActive(ctx context.Context, userID string, isActive boo
 
 // GetUser получает пользователя по ID
 func (s *UserService) GetUser(ctx context.Context, userID string) (*domain.User, error) {
-	return s.userRepo.GetByID(ctx, userID)
+	return s.userRepo.GetUserByID(ctx, userID)
 }
 
 // GetReviewerStats получает статистику ревьюверов

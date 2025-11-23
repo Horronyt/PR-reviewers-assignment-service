@@ -4,18 +4,22 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/service"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/service"
 )
 
 // UserHandler обработчик для операций с пользователями
 type UserHandler struct {
 	userService *service.UserService
+	prService   *service.PRService
 }
 
 // NewUserHandler создает новый handler
-func NewUserHandler(userService *service.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewUserHandler(userService *service.UserService, prService *service.PRService) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+		prService:   prService,
+	}
 }
 
 // SetActive обработчик POST /users/setIsActive
@@ -64,7 +68,7 @@ func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prs, err := h.userService.GetPRsByReviewer(r.Context(), userID)
+	prs, err := h.prService.GetReviewsForUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -86,46 +90,5 @@ func (h *UserHandler) GetReview(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user_id":       userID,
 		"pull_requests": prList,
-	})
-}
-
-// StatsHandler для статистики
-type StatsHandler struct {
-	userService *service.UserService
-}
-
-// NewStatsHandler создает handler для статистики
-func NewStatsHandler(userService *service.UserService) *StatsHandler {
-	return &StatsHandler{userService: userService}
-}
-
-// GetStats обработчик GET /stats
-func (h *StatsHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	reviewerStats, err := h.userService.GetReviewerStats(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	prStats, err := h.userService.GetPRStats(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	statsData := make([]interface{}, len(reviewerStats))
-	for i, stat := range reviewerStats {
-		statsData[i] = map[string]interface{}{
-			"user_id":          stat.UserID,
-			"assignment_count": stat.AssignmentCount,
-		}
-	}
-
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"reviewer_stats": statsData,
-		"pr_stats":       prStats,
 	})
 }

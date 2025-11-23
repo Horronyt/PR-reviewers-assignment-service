@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,11 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/handler"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo/postgres"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
-	"pr-reviewers-service/internal/handler"
-	"pr-reviewers-service/internal/repo/postgres"
-	"pr-reviewers-service/internal/service"
 )
 
 func main() {
@@ -53,7 +56,7 @@ func main() {
 	// Инициализация handlers
 	teamHandler := handler.NewTeamHandler(teamSvc)
 	prHandler := handler.NewPRHandler(prSvc, userSvc)
-	userHandler := handler.NewUserHandler(userSvc)
+	userHandler := handler.NewUserHandler(userSvc, prSvc)
 	statsHandler := handler.NewStatsHandler(userSvc)
 	healthHandler := handler.NewHealthHandler()
 
@@ -75,6 +78,8 @@ func main() {
 
 	// Stats endpoints
 	mux.HandleFunc("GET /stats", statsHandler.GetStats)
+	mux.HandleFunc("GET /stats/reviewers", statsHandler.GetReviewerStats)
+	mux.HandleFunc("GET /stats/prs", statsHandler.GetPRStats)
 
 	// Health check endpoints
 	mux.HandleFunc("GET /health", healthHandler.Health)
@@ -107,7 +112,7 @@ func main() {
 		}
 	}()
 
-	log.Printf("✓ Starting PR Reviewer Assignment Service on :%s", port)
+	log.Printf("Starting PR Reviewer Assignment Service on :%s", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server error: %v", err)
 	}
@@ -115,24 +120,30 @@ func main() {
 
 // runMigrations применяет все goose миграции
 func runMigrations(db *pgxpool.Pool) error {
-	// Получаем стандартное SQL соединение для goose
-	sqlDB := db.QueryRow(context.Background(), "SELECT 1")
-	_ = sqlDB // используется pgxpool напрямую для миграций
-
-	// Используем goose с PostgreSQL
-	if err := goose.SetDialect("postgres"); err != nil {
+	// Критически важно: dialect именно "pgx", а не "postgres"
+	if err := goose.SetDialect("pgx"); err != nil {
 		return err
 	}
 
-	// Путь к миграциям
 	migrationsDir := "./migrations"
 	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
 		log.Printf("Migrations directory not found at %s, skipping migrations", migrationsDir)
 		return nil
 	}
 
-	// Применяем миграции (это требует sql.DB, поэтому мы используем pgxpool напрямую)
-	// Альтернатива: использовать стандартную БазуПг без пула для миграций
-	log.Println("✓ Migrations applied successfully")
+	log.Println("Applying database migrations from ./migrations...")
+
+	sqlDB, err := sql.Open("pgx", db.Config().ConnString())
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
+
+	// ← ЭТО РАБОТАЕТ ТОЛЬКО если есть импорт _ "github.com/jackc/pgx/v5/stdlib"
+	if err := goose.Up(sqlDB, migrationsDir); err != nil {
+		return fmt.Errorf("goose migration failed: %w", err)
+	}
+
+	log.Println("All migrations applied successfully!")
 	return nil
 }

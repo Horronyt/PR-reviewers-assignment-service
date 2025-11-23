@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
 	"time"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
 )
 
 // PRService сервис для работы с PR
@@ -41,7 +41,7 @@ func (s *PRService) CreatePR(ctx context.Context, prID, name, authorID string) (
 	}
 
 	// Проверяем существование автора
-	_, err = s.userRepo.GetByID(ctx, authorID)
+	_, err = s.userRepo.GetUserByID(ctx, authorID)
 	if err != nil {
 		return nil, domain.NewError(domain.ErrorCodeNotFound, "author not found")
 	}
@@ -115,5 +115,5 @@ func (s *PRService) ReassignReviewer(ctx context.Context, prID, oldReviewerID st
 
 // GetReviewsForUser получает PR, где пользователь назначен ревьювером
 func (s *PRService) GetReviewsForUser(ctx context.Context, userID string) ([]domain.PullRequest, error) {
-	return s.prRepo.GetPRByReviewer(ctx, userID)
+	return s.prRepo.GetPRsByReviewer(ctx, userID)
 }

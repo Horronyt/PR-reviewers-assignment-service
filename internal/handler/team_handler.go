@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/service"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/service"
 )
 
 // ErrorResponse структура для ошибки

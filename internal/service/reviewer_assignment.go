@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
 	"math/rand"
 
-	"github.com/horronyt/pr-reviewers-service/internal/domain"
-	"github.com/horronyt/pr-reviewers-service/internal/repo"
+	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
 )
 
 // ReviewerAssignmentService сервис назначения ревьюверов
@@ -32,13 +32,13 @@ func NewReviewerAssignmentService(
 // AssignReviewers назначает до 2 ревьюверов на PR
 func (s *ReviewerAssignmentService) AssignReviewers(ctx context.Context, pr *domain.PullRequest) ([]string, error) {
 	// Получаем информацию об авторе
-	author, err := s.userRepo.GetByID(ctx, pr.AuthorID)
+	author, err := s.userRepo.GetUserByID(ctx, pr.AuthorID)
 	if err != nil {
 		return nil, fmt.Errorf("author not found: %w", err)
 	}
 
 	// Получаем активных членов команды автора, исключая автора
-	candidates, err := s.userRepo.GetActive(ctx, author.TeamName)
+	candidates, err := s.userRepo.GetActiveUsers(ctx, author.TeamName)
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +95,13 @@ func (s *ReviewerAssignmentService) ReassignReviewer(ctx context.Context, prID, 
 	}
 
 	// Получаем команду старого ревьювера
-	oldReviewer, err := s.userRepo.GetByID(ctx, oldReviewerID)
+	oldReviewer, err := s.userRepo.GetUserByID(ctx, oldReviewerID)
 	if err != nil {
 		return "", domain.NewError(domain.ErrorCodeNotFound, "old reviewer not found")
 	}
 
 	// Получаем активных членов его команды, исключая его самого
-	candidates, err := s.userRepo.GetActive(ctx, oldReviewer.TeamName)
+	candidates, err := s.userRepo.GetActiveUsers(ctx, oldReviewer.TeamName)
 	if err != nil {
 		return "", err
 	}

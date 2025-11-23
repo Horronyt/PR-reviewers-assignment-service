@@ -1,4 +1,4 @@
-module PR-reviewers-assignment-service
+module github.com/Horronyt/PR-reviewers-assignment-service
 
 go 1.24
 
