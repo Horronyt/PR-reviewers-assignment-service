@@ -18,6 +18,24 @@ services:
     networks:
       - pr_network
 
+  test-db:
+    image: postgres:16-alpine
+    container_name: test-db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: pr_reviewers_test        # ← именно такое имя!
+    ports:
+      - "5433:5432"                         # ← другой порт
+    tmpfs: /var/lib/postgresql/data        # ← данные в памяти = супербыстро + чисто
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d pr_reviewers_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+    networks:
+      - pr_network
+
   api:
     build:
       context: .

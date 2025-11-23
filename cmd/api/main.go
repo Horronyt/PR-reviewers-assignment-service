@@ -139,7 +139,6 @@ func runMigrations(db *pgxpool.Pool) error {
 	}
 	defer sqlDB.Close()
 
-	// ← ЭТО РАБОТАЕТ ТОЛЬКО если есть импорт _ "github.com/jackc/pgx/v5/stdlib"
 	if err := goose.Up(sqlDB, migrationsDir); err != nil {
 		return fmt.Errorf("goose migration failed: %w", err)
 	}
