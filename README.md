@@ -36,12 +36,13 @@ docker compose down -v
 ## Запуск тестов
 
 ```bash
+docker-compose up -d test-db
 go test ./tests/... -v -count=1
 ```
 
+При завершении тестов может потребоваться нажать Ctrl+C (для ОС Windows)
+
 ## Основные команды
-- **Запуск**: docker compose up -d --build
+- **Запуск**: docker compose up -d api postgres --build
 
 - **Остановка**: docker compose down -v
-
-- **Тесты**: go test ./tests/... -v -count=1

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
-	"log"
 	"math/rand"
 
 	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
@@ -124,8 +123,6 @@ func (s *ReviewerAssignmentService) ReassignReviewer(ctx context.Context, prID, 
 
 	if len(availableCandidates) == 0 {
 		return "", domain.NewError(domain.ErrorCodeNoCandidate, "no active replacement candidate in team")
-	} else {
-		log.Println(availableCandidates)
 	}
 
 	// Выбираем случайного кандидата
