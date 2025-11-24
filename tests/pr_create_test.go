@@ -11,8 +11,6 @@ import (
 
 // Обернем общую логику настройки в отдельную функцию, чтобы не дублировать код
 func setupTest(t *testing.T, it *IntegrationTest) {
-	it.Cleanup(t) // Очистка перед каждым тестом/подтестом
-
 	// Общая настройка данных, необходимая для обоих подтестов
 	it.Post(t, "/team/add", map[string]any{
 		"team_name": "backend",

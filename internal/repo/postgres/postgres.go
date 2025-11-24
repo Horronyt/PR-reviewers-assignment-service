@@ -4,6 +4,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
@@ -174,6 +175,9 @@ func (r *Repository) UpdateReviewers(ctx context.Context, prID string, reviewers
 	if len(reviewers) == 0 {
 		return nil
 	}
+
+	log.Println(reviewers, "QEQWEQWEQW EQW ")
+
 	query := `INSERT INTO pr_reviewers (pull_request_id, reviewer_id, assigned_at) VALUES ($1, $2, $3)`
 	now := time.Now()
 	for _, reviewerID := range reviewers {

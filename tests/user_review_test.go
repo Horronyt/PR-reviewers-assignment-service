@@ -13,7 +13,6 @@ import (
 func TestGetUserReviews(t *testing.T) {
 	it := New(t)
 	defer it.Close()
-	it.Cleanup(t)
 
 	it.Post(t, "/team/add", map[string]any{
 		"team_name": "mobile",

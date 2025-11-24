@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Horronyt/PR-reviewers-assignment-service/internal/repo"
+	"log"
 	"math/rand"
 
 	"github.com/Horronyt/PR-reviewers-assignment-service/internal/domain"
@@ -106,21 +107,29 @@ func (s *ReviewerAssignmentService) ReassignReviewer(ctx context.Context, prID, 
 		return "", err
 	}
 
+	excluded := map[string]bool{
+		oldReviewerID: true,
+		pr.AuthorID:   true,
+	}
+	for _, r := range pr.AssignedReviewers {
+		excluded[r] = true
+	}
+
 	var availableCandidates []domain.User
 	for _, candidate := range candidates {
-		// Исключаем самого старого ревьювера и автора PR
-		if candidate.UserID != oldReviewerID && candidate.UserID != pr.AuthorID {
+		if !excluded[candidate.UserID] && candidate.IsActive {
 			availableCandidates = append(availableCandidates, candidate)
 		}
 	}
 
 	if len(availableCandidates) == 0 {
 		return "", domain.NewError(domain.ErrorCodeNoCandidate, "no active replacement candidate in team")
+	} else {
+		log.Println(availableCandidates)
 	}
 
 	// Выбираем случайного кандидата
 	newReviewerID := availableCandidates[rand.Intn(len(availableCandidates))].UserID
-
 	// Обновляем список ревьюверов
 	newReviewers := make([]string, 0, len(pr.AssignedReviewers))
 	for _, reviewer := range pr.AssignedReviewers {

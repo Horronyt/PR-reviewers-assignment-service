@@ -13,7 +13,6 @@ import (
 func TestTeamFlow(t *testing.T) {
 	it := New(t)
 	defer it.Close()
-	it.Cleanup(t)
 
 	t.Run("Create team successfully", func(t *testing.T) {
 		body := map[string]any{

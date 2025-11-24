@@ -12,10 +12,8 @@ import (
 
 func TestPRReassign(t *testing.T) {
 	it := New(t)
-	defer it.Close()
-	it.Cleanup(t)
 
-	// Создаём команду с 5 участниками
+	// Создаём команду
 	it.Post(t, "/team/add", map[string]any{
 		"team_name": "core",
 		"members": []map[string]any{
@@ -27,7 +25,13 @@ func TestPRReassign(t *testing.T) {
 		},
 	})
 
-	// Создаём PR (автор не должен попасть в ревьюверы)
+	// === Создаём PR и сразу получаем назначенных ревьюверов ===
+	var initialPR struct {
+		PR struct {
+			AssignedReviewers []string `json:"assigned_reviewers"`
+		} `json:"pr"`
+	}
+
 	resp := it.Post(t, "/pullRequest/create", map[string]any{
 		"pull_request_id":   "pr-reassign-1",
 		"pull_request_name": "Refactoring",
@@ -35,15 +39,20 @@ func TestPRReassign(t *testing.T) {
 	})
 	defer resp.Body.Close()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&initialPR))
+
+	initialReviewers := initialPR.PR.AssignedReviewers
+	require.Len(t, initialReviewers, 2, "при создании PR должно быть назначено 2 ревьювера")
+	require.NotContains(t, initialReviewers, "author", "автор не должен быть ревьювером")
 
 	t.Run("Successfully reassign reviewer", func(t *testing.T) {
-		// Предположим, изначально назначены r1 и r2
-		body := map[string]any{
-			"pull_request_id": "pr-reassign-1",
-			"old_user_id":     "r1", // заменяем r1
-		}
+		// Берём любого из текущих ревьюверов
+		oldReviewerID := initialReviewers[0]
 
-		resp := it.Post(t, "/pullRequest/reassign", body)
+		resp := it.Post(t, "/pullRequest/reassign", map[string]any{
+			"pull_request_id": "pr-reassign-1",
+			"old_user_id":     oldReviewerID,
+		})
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -55,28 +64,30 @@ func TestPRReassign(t *testing.T) {
 		}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
-		// r1 должен быть заменён на кого-то из оставшихся активных (r3 или r4)
-		assert.NotContains(t, result.PR.AssignedReviewers, "r1")
-		assert.Contains(t, []string{"r3", "r4"}, result.ReplacedBy)
-		assert.Len(t, result.PR.AssignedReviewers, 2)
-		assert.NotContains(t, result.PR.AssignedReviewers, "author")
+		newReviewers := result.PR.AssignedReviewers
+
+		assert.NotContains(t, newReviewers, oldReviewerID, "старый ревьювер должен исчезнуть")
+		assert.Contains(t, newReviewers, result.ReplacedBy, "новый ревьювер должен быть в списке")
+		assert.Len(t, newReviewers, 2, "количество ревьюверов должно остаться 2")
+		assert.NotContains(t, newReviewers, "author", "автор не должен попасть в ревьюверы")
+		assert.NotEqual(t, oldReviewerID, result.ReplacedBy, "новый ≠ старый")
 	})
 
 	t.Run("Reassign on merged PR → 409 PR_MERGED", func(t *testing.T) {
-		// Сначала мержим PR
 		it.Post(t, "/pullRequest/merge", map[string]any{"pull_request_id": "pr-reassign-1"})
+
+		oldReviewerID := initialReviewers[0] // всё ещё валиден
 
 		resp := it.Post(t, "/pullRequest/reassign", map[string]any{
 			"pull_request_id": "pr-reassign-1",
-			"old_user_id":     "r2",
+			"old_user_id":     oldReviewerID,
 		})
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusConflict, resp.StatusCode)
 
 		var errResp struct {
 			Error struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
+				Code string `json:"code"`
 			} `json:"error"`
 		}
 		json.NewDecoder(resp.Body).Decode(&errResp)
@@ -84,9 +95,37 @@ func TestPRReassign(t *testing.T) {
 	})
 
 	t.Run("Reassign non-assigned reviewer → 409 NOT_ASSIGNED", func(t *testing.T) {
+		// Создаём новый PR специально для этого кейса
+		respCreate := it.Post(t, "/pullRequest/create", map[string]any{
+			"pull_request_id":   "pr-not-assigned-test",
+			"pull_request_name": "Test PR",
+			"author_id":         "author",
+		})
+		defer respCreate.Body.Close()
+
+		var tempPR struct {
+			PR struct {
+				AssignedReviewers []string `json:"assigned_reviewers"`
+			} `json:"pr"`
+		}
+		require.NoError(t, json.NewDecoder(respCreate.Body).Decode(&tempPR))
+		current := tempPR.PR.AssignedReviewers
+
+		// Находим НЕ назначенного
+		all := map[string]bool{"r1": true, "r2": true, "r3": true, "r4": true}
+		for _, r := range current {
+			delete(all, r)
+		}
+		var nonAssigned string
+		for id := range all {
+			nonAssigned = id
+			break
+		}
+		require.NotEmpty(t, nonAssigned)
+
 		resp := it.Post(t, "/pullRequest/reassign", map[string]any{
-			"pull_request_id": "pr-reassign-1",
-			"old_user_id":     "r4", // r4 не был назначен
+			"pull_request_id": "pr-not-assigned-test",
+			"old_user_id":     nonAssigned,
 		})
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -102,20 +141,42 @@ func TestPRReassign(t *testing.T) {
 
 	t.Run("No active candidate → 409 NO_CANDIDATE", func(t *testing.T) {
 		// Создаём новый PR
-		it.Post(t, "/pullRequest/create", map[string]any{
+		var prResp struct {
+			PR struct {
+				AssignedReviewers []string `json:"assigned_reviewers"`
+			} `json:"pr"`
+		}
+
+		resp := it.Post(t, "/pullRequest/create", map[string]any{
 			"pull_request_id":   "pr-no-candidate",
 			"pull_request_name": "Hotfix",
 			"author_id":         "author",
 		})
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusCreated, resp.StatusCode)
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&prResp))
 
-		// Деактивируем всех, кроме автора и одного ревьювера
-		for _, id := range []string{"r2", "r3", "r4"} {
-			it.Post(t, "/users/setIsActive", map[string]any{"user_id": id, "is_active": false})
+		currentReviewers := prResp.PR.AssignedReviewers
+		require.Len(t, currentReviewers, 2)
+
+		// Деактивируем ВСЕХ, кроме ОДНОГО из текущих ревьюверов
+		// Например, оставляем активным только первого назначенного
+		keepActive := currentReviewers[0]
+
+		// Деактивируем всех остальных из команды (r1–r4), кроме keepActive и author
+		for _, id := range []string{"r1", "r2", "r3", "r4"} {
+			if id != keepActive {
+				it.Post(t, "/users/setIsActive", map[string]any{
+					"user_id":   id,
+					"is_active": false,
+				})
+			}
 		}
 
-		resp := it.Post(t, "/pullRequest/reassign", map[string]any{
+		// Теперь пытаемся заменить единственного активного ревьювера
+		resp = it.Post(t, "/pullRequest/reassign", map[string]any{
 			"pull_request_id": "pr-no-candidate",
-			"old_user_id":     "r1", // пытаемся заменить последнего активного
+			"old_user_id":     keepActive, // ← 100% назначен и активен
 		})
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusConflict, resp.StatusCode)
