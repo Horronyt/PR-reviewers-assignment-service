@@ -26,7 +26,6 @@ func setupTest(t *testing.T, it *IntegrationTest) {
 func TestPRCreation(t *testing.T) {
 	// New и Close вызываются только один раз для всего набора тестов/подтестов
 	it := New(t)
-	defer it.Close()
 
 	t.Run("Creates PR and assigns 2 reviewers", func(t *testing.T) {
 		// Настройка базы данных только для этого подтеста

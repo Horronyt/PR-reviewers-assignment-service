@@ -12,7 +12,6 @@ import (
 
 func TestSetUserActive(t *testing.T) {
 	it := New(t)
-	defer it.Close()
 
 	it.Post(t, "/team/add", map[string]any{
 		"team_name": "frontend",
